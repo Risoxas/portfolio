@@ -43,6 +43,13 @@ export interface CloudNode {
   highlights: string[];
 }
 
+export interface CertificationItem {
+  name: string;
+  issuer: string;
+  status: "Earned" | "In Progress" | "Planned";
+  focus: string;
+}
+
 export const PROFILE = {
   name: "David Alvarez Gasca",
   handle: "Risoxas",
@@ -59,6 +66,21 @@ export const PROFILE = {
     period: "2012 – 2018",
   },
 } as const;
+
+export const CERTIFICATIONS: CertificationItem[] = [
+  {
+    name: "AWS Certified Solutions Architect – Associate",
+    issuer: "Amazon Web Services",
+    status: "Planned",
+    focus: "Serverless architectures, Lambda, API Gateway, DynamoDB & IAM",
+  },
+  {
+    name: "Google Cloud Professional Cloud Architect",
+    issuer: "Google Cloud",
+    status: "Planned",
+    focus: "Cloud Run, BigQuery, Cloud Build & cost-optimized workloads",
+  },
+];
 
 export const IMPACT_METRICS: ImpactMetric[] = [
   {

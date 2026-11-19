@@ -1,5 +1,6 @@
 import { CloudArchitecture } from "@/components/CloudArchitecture";
 import { ContactSection } from "@/components/ContactSection";
+import { EducationSection } from "@/components/EducationSection";
 import { ExperienceTimeline } from "@/components/ExperienceTimeline";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
@@ -23,6 +24,7 @@ export default async function HomePage() {
         <ExperienceTimeline />
         <ProjectsSection repos={repos} repoSource={source} />
         <SkillsMatrix />
+        <EducationSection />
         <ContactSection />
       </main>
       <Footer />
