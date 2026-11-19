@@ -1,3 +1,20 @@
+[project]
+name = "gcp-analytics-api"
+version = "1.0.0"
+description = "Lightweight FastAPI microservice for GCP Cloud Run Always Free Tier"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.115.12",
+  "pydantic==2.11.4",
+  "uvicorn[standard]==0.34.2",
+]
+
+[dependency-groups]
+dev = [
+  "httpx==0.28.1",
+  "pytest==8.3.5",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
