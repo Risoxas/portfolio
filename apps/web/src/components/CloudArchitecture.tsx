@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Activity, CheckCircle2, Cloud, Cpu, Database, Server } from "lucide-react";
 import { CLOUD_NODES, type CloudNode } from "@/data/resume";
 import type { ServiceProbe } from "@/app/api/health/route";
@@ -9,23 +9,44 @@ interface HealthResponse {
   ok: boolean;
   timestamp: string;
   monthlyCostUsd: number;
+  cached?: boolean;
   services: ServiceProbe[];
 }
+
+const COOLDOWN_SECONDS = 15;
 
 export function CloudArchitecture() {
   const [selectedId, setSelectedId] = useState<CloudNode["id"]>("vercel");
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [rateLimitMsg, setRateLimitMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
 
   const selectedNode = CLOUD_NODES.find((n) => n.id === selectedId) ?? CLOUD_NODES[0];
 
   const runHealthCheck = async () => {
+    if (loading || cooldown > 0) return;
     setLoading(true);
+    setRateLimitMsg(null);
+
     try {
       const res = await fetch("/api/health", { cache: "no-store" });
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get("Retry-After") ?? COOLDOWN_SECONDS);
+        setCooldown(Math.max(1, retryAfter));
+        setRateLimitMsg(`Rate-limited to protect free tier. Try again in ${retryAfter}s.`);
+        return;
+      }
       if (res.ok) {
         const data = (await res.json()) as HealthResponse;
         setHealth(data);
+        setCooldown(COOLDOWN_SECONDS);
       }
     } finally {
       setLoading(false);
@@ -34,6 +55,12 @@ export function CloudArchitecture() {
 
   const getProbeFor = (id: CloudNode["id"]) =>
     health?.services.find((s) => s.id === id);
+
+  const buttonLabel = loading
+    ? "Probing Cloud Nodes..."
+    : cooldown > 0
+      ? `Cooldown (${cooldown}s)`
+      : "Ping Multi-Cloud Health";
 
   return (
     <section id="architecture" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
@@ -51,20 +78,27 @@ export function CloudArchitecture() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={runHealthCheck}
-          disabled={loading}
-          className="inline-flex cursor-pointer items-center gap-2 self-start rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-opacity hover:opacity-85 disabled:opacity-60 sm:self-auto"
-          style={{
-            borderColor: "var(--border-subtle)",
-            backgroundColor: "var(--bg-surface)",
-            color: "var(--text-primary)",
-          }}
-        >
-          <Activity className="h-4 w-4" style={{ color: "var(--accent-emerald)" }} aria-hidden="true" />
-          {loading ? "Probing Cloud Nodes..." : "Ping Multi-Cloud Health"}
-        </button>
+        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+          <button
+            type="button"
+            onClick={runHealthCheck}
+            disabled={loading || cooldown > 0}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+            style={{
+              borderColor: "var(--border-subtle)",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-primary)",
+            }}
+          >
+            <Activity className="h-4 w-4" style={{ color: "var(--accent-emerald)" }} aria-hidden="true" />
+            {buttonLabel}
+          </button>
+          {rateLimitMsg && (
+            <span className="font-mono text-[11px] text-amber-500" role="status">
+              {rateLimitMsg}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -157,14 +191,15 @@ export function CloudArchitecture() {
 
         {getProbeFor(selectedNode.id) && (
           <div
-            className="mt-4 rounded-lg border px-3.5 py-2.5 font-mono text-xs"
+            className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 font-mono text-xs"
             style={{
               borderColor: "var(--border-subtle)",
               backgroundColor: "var(--bg-muted)",
               color: "var(--text-secondary)",
             }}
           >
-            Probe: {getProbeFor(selectedNode.id)?.detail}
+            <span>Probe: {getProbeFor(selectedNode.id)?.detail}</span>
+            {health?.cached && <span>Cached (30s TTL)</span>}
           </div>
         )}
       </div>

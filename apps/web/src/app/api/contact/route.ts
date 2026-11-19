@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClientIp, SlidingWindowRateLimiter } from "@/lib/rate-limit";
 
 interface ContactPayload {
   name?: unknown;
@@ -7,8 +8,27 @@ interface ContactPayload {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const contactLimiter = new SlidingWindowRateLimiter(3, 60_000);
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request.headers);
+  const limit = contactLimiter.check(`contact:${ip}`);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Too many requests. Please wait ${limit.retryAfterSeconds}s before sending another message.`,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(limit.retryAfterSeconds),
+          "X-RateLimit-Remaining": "0",
+        },
+      }
+    );
+  }
+
   let body: ContactPayload;
   try {
     body = (await request.json()) as ContactPayload;

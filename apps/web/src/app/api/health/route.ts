@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getClientIp, SlidingWindowRateLimiter } from "@/lib/rate-limit";
 
 export interface ServiceProbe {
   id: "vercel" | "gcp" | "aws";
@@ -6,6 +7,19 @@ export interface ServiceProbe {
   latencyMs: number;
   detail: string;
 }
+
+interface HealthPayload {
+  ok: boolean;
+  timestamp: string;
+  monthlyCostUsd: number;
+  cached: boolean;
+  services: ServiceProbe[];
+}
+
+const CACHE_TTL_MS = 30_000;
+const rateLimiter = new SlidingWindowRateLimiter(5, 60_000);
+
+let cachedResult: { payload: Omit<HealthPayload, "cached">; expiresAt: number } | null = null;
 
 async function probeUrl(url: string, timeoutMs = 2500): Promise<{ ok: boolean; latencyMs: number }> {
   const start = performance.now();
@@ -27,7 +41,42 @@ async function probeUrl(url: string, timeoutMs = 2500): Promise<{ ok: boolean; l
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const ip = getClientIp(request.headers);
+  const limit = rateLimiter.check(`health:${ip}`);
+
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Rate limit exceeded. Try again in ${limit.retryAfterSeconds}s.`,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(limit.retryAfterSeconds),
+          "X-RateLimit-Remaining": "0",
+        },
+      }
+    );
+  }
+
+  const now = Date.now();
+  if (cachedResult && cachedResult.expiresAt > now) {
+    return NextResponse.json(
+      {
+        ...cachedResult.payload,
+        cached: true,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=30",
+          "X-RateLimit-Remaining": String(limit.remaining),
+        },
+      }
+    );
+  }
+
   const gcpBase = process.env.GCP_API_URL?.replace(/\/$/, "");
   const awsBase = process.env.AWS_CONTACT_API_URL?.replace(/\/$/, "");
 
@@ -75,10 +124,28 @@ export async function GET() {
         },
   ];
 
-  return NextResponse.json({
+  const payload: Omit<HealthPayload, "cached"> = {
     ok: true,
     timestamp: new Date().toISOString(),
     monthlyCostUsd: 0,
     services,
-  });
+  };
+
+  cachedResult = {
+    payload,
+    expiresAt: now + CACHE_TTL_MS,
+  };
+
+  return NextResponse.json(
+    {
+      ...payload,
+      cached: false,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=30",
+        "X-RateLimit-Remaining": String(limit.remaining),
+      },
+    }
+  );
 }
