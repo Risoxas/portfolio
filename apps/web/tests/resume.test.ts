@@ -18,4 +18,12 @@ describe("Resume & Portfolio Data", () => {
     expect(CASE_STUDIES.length).toBeGreaterThanOrEqual(4);
     expect(SKILL_CATEGORIES.length).toBe(4);
   });
+
+  it("has unique URL-safe case study IDs for Next.js SSG generateStaticParams", () => {
+    const ids = CASE_STUDIES.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) {
+      expect(id).toMatch(/^[a-z0-9-]+$/);
+    }
+  });
 });

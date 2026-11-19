@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, CheckCircle2, FolderGit2, Layers, Star, X } from "lucide-react";
 import { CASE_STUDIES, type CaseStudy } from "@/data/resume";
@@ -118,8 +119,15 @@ export function ProjectsSection({ repos, repoSource }: ProjectsSectionProps) {
                 className="cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: "var(--accent)" }}
               >
-                Inspect Architecture
+                Quick Inspect
               </button>
+              <Link
+                href={`/projects/${study.id}`}
+                className="inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Full Case Study
+              </Link>
               {study.repoUrl && (
                 <a
                   href={study.repoUrl}

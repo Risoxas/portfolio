@@ -8,6 +8,9 @@ import { ProjectsSection } from "@/components/ProjectsSection";
 import { SkillsMatrix } from "@/components/SkillsMatrix";
 import { getGitHubRepos } from "@/lib/github";
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export default async function HomePage() {
   const { repos, source } = await getGitHubRepos("Risoxas");
 
