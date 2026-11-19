@@ -1,0 +1,15 @@
+{
+  "name": "aws-contact-lambda",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3"
+  }
+}

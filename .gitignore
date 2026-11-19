@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Next.js / Vercel
+apps/web/.next/
+apps/web/out/
+.vercel
+
+# Build & Test outputs
+dist/
+coverage/
+.pytest_cache/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Environment & OS
+.env
+.env*.local
+.DS_Store
+Thumbs.db

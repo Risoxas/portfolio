@@ -1,0 +1,59 @@
+name: Portfolio CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: Next.js Frontend (Vercel)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  gcp-analytics-api:
+    name: Python FastAPI (GCP Cloud Run)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/gcp-analytics-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pytest -v
+
+  aws-contact-lambda:
+    name: Node.js Lambda (AWS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/aws-contact-lambda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: services/aws-contact-lambda/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
